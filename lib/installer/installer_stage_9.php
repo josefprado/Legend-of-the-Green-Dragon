@@ -10,7 +10,6 @@ output("`n`@Table Synchronization Logs:`n");
 rawoutput("<div style='width: 100%; height: 150px; max-height: 150px; overflow: auto;'>");
 $descriptors = descriptors($DB_PREFIX);
 require_once("lib/tabledescriptor.php");
-reset($descriptors);
 foreach ($descriptors as $tableName => $descriptor) {
 	output("`3Synchronizing table `#$tableName`3..`n");
 	synctable($tableName, $descriptor, true);
@@ -21,14 +20,12 @@ rawoutput("</div>");
 output("`n`2The tables now have new fields and columns added, I'm going to begin importing data now.`n");
 rawoutput("<div style='width: 100%; height: 150px; max-height: 150px; overflow: auto;'>");
 $doSQL = false;
-reset($sql_upgrade_statements);
 foreach ($sql_upgrade_statements as $key => $val) {
 	if ($doSQL) {
 		output("`3Version `#%s`3: %s SQL statements...`n", $key, count($val));
 		if (count($val) > 0) {
-			output("`^Doing: `6");
-			reset($val);
-			$count = 0;
+                       output("`^Doing: `6");
+                       $count = 0;
 			foreach ($val as $id => $sql) {
 				$onlyupgrade = 0;
 				if (substr($sql, 0, 2) == '1|') {
@@ -79,9 +76,8 @@ if (!getSession('skipmodules')) {
   output("`n`2Now I'll install and configure your modules.");
   rawoutput("<div style='width: 100%; height: 150px; max-height: 150px; overflow: auto;'>");
   foreach($session['moduleoperations'] as $modName => $val) {
-	  $ops = explode(',', $val);
-	  reset($ops);
-		foreach ($ops as $trash => $op) {
+      $ops = explode(',', $val);
+                foreach ($ops as $trash => $op) {
 		  switch ($op) {
 			  case "uninstall":
 				  output("`3Uninstalling `#$modName`3: ");
@@ -122,7 +118,6 @@ if (!getSession('skipmodules')) {
 }
 output("`n`2Finally, I'll clean up old data.`n");
 rawoutput("<div style='width: 100%; height: 150px; max-height: 150px; overflow: auto;'>");
-reset($descriptors);
 foreach ($descriptors as $tableName => $descriptor) {
 	output("`3Cleaning up `#$tableName`3...`n");
 	synctable($tableName, $descriptor);
