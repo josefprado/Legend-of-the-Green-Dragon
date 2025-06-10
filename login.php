@@ -33,8 +33,8 @@ if ($name!=""){
 		} else {
 			$password = md5(md5($password));
 		}
-		$sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = '$name' AND password='$password' AND locked=0";
-		$result = db_query($sql);
+$sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = ? AND password=? AND locked=0";
+$result = db_query_prepared($sql, [$name, $password]);
 		if (db_num_rows($result)==1){
 			$session['user']=db_fetch_assoc($result);
 			$companions = @unserialize($session['user']['companions']);
@@ -81,7 +81,10 @@ if ($name!=""){
 					exit();
 				}
 
-				db_query("UPDATE " . db_prefix("accounts") . " SET loggedin=".true.", laston='".date("Y-m-d H:i:s")."' WHERE acctid = ".$session['user']['acctid']);
+db_query_prepared(
+    "UPDATE " . db_prefix("accounts") . " SET loggedin=?, laston=? WHERE acctid = ?",
+    [true, date("Y-m-d H:i:s"), $session['user']['acctid']]
+);
 
 				$session['user']['loggedin']=true;
 				$location = $session['user']['location'];
@@ -102,20 +105,26 @@ if ($name!=""){
 			$session['message']=translate_inline("`4Error, your login was incorrect`0");
 			//now we'll log the failed attempt and begin to issue bans if
 			//there are too many, plus notify the admins.
-			$sql = "DELETE FROM " . db_prefix("faillog") . " WHERE date<'".date("Y-m-d H:i:s",strtotime("-".(getsetting("expirecontent",180)/4)." days"))."'";
-			checkban($name, true);
-			db_query($sql);
-			$sql = "SELECT acctid FROM " . db_prefix("accounts") . " WHERE login='$name'";
-			$result = db_query($sql);
+$sql = "DELETE FROM " . db_prefix("faillog") . " WHERE date < ?";
+checkban($name, true);
+db_query_prepared($sql, [date("Y-m-d H:i:s", strtotime("-" . (getsetting("expirecontent", 180)/4) . " days"))]);
+$sql = "SELECT acctid FROM " . db_prefix("accounts") . " WHERE login=?";
+$result = db_query_prepared($sql, [$name]);
 			if (db_num_rows($result)>0){
 				// just in case there manage to be multiple accounts on
 				// this name.
 				while ($row=db_fetch_assoc($result)){
 					$post = httpallpost();
-					$sql = "INSERT INTO " . db_prefix("faillog") . " VALUES (0,'".date("Y-m-d H:i:s")."','".addslashes(serialize($post))."','{$_SERVER['REMOTE_ADDR']}','{$row['acctid']}','{$_COOKIE['lgi']}')";
-					db_query($sql);
-					$sql = "SELECT " . db_prefix("faillog") . ".*," . db_prefix("accounts") . ".superuser,name,login FROM " . db_prefix("faillog") . " INNER JOIN " . db_prefix("accounts") . " ON " . db_prefix("accounts") . ".acctid=" . db_prefix("faillog") . ".acctid WHERE ip='{$_SERVER['REMOTE_ADDR']}' AND date>'".date("Y-m-d H:i:s",strtotime("-1 day"))."'";
-					$result2 = db_query($sql);
+$sql = "INSERT INTO " . db_prefix("faillog") . " VALUES (0, ?, ?, ?, ?, ?)";
+db_query_prepared($sql, [
+date("Y-m-d H:i:s"),
+addslashes(serialize($post)),
+$_SERVER['REMOTE_ADDR'],
+$row['acctid'],
+$_COOKIE['lgi']
+]);
+$sql = "SELECT " . db_prefix("faillog") . ".*," . db_prefix("accounts") . ".superuser,name,login FROM " . db_prefix("faillog") . " INNER JOIN " . db_prefix("accounts") . " ON " . db_prefix("accounts") . ".acctid=" . db_prefix("faillog") . ".acctid WHERE ip=? AND date> ?";
+$result2 = db_query_prepared($sql, [$_SERVER['REMOTE_ADDR'], date("Y-m-d H:i:s", strtotime("-1 day"))]);
 					$c=0;
 					$alert="";
 					$su=false;
@@ -127,20 +136,24 @@ if ($name!=""){
 					if ($c>=10){
 						// 5 failed attempts for superuser, 10 for regular user
 						$banmessage=translate_inline("Automatic System Ban: Too many failed login attempts.");
-						$sql = "INSERT INTO " . db_prefix("bans") . " VALUES ('{$_SERVER['REMOTE_ADDR']}','','".date("Y-m-d H:i:s",strtotime("+".($c*3)." hours"))."','$banmessage','System','0000-00-00 00:00:00')";
-						db_query($sql);
+$sql = "INSERT INTO " . db_prefix("bans") . " VALUES (?, '', ?, ?, 'System', '0000-00-00 00:00:00')";
+db_query_prepared($sql, [
+$_SERVER['REMOTE_ADDR'],
+date("Y-m-d H:i:s", strtotime("+" . ($c*3) . " hours")),
+$banmessage
+]);
 						if ($su){
 							// send a system message to admins regarding
 							// this failed attempt if it includes superusers.
-							$sql = "SELECT acctid FROM " . db_prefix("accounts") ." WHERE (superuser&".SU_EDIT_USERS.")";
-							$result2 = db_query($sql);
+$sql = "SELECT acctid FROM " . db_prefix("accounts") ." WHERE (superuser&".SU_EDIT_USERS.")";
+$result2 = db_query_prepared($sql);
 							$subj = translate_mail(array("`#%s failed to log in too many times!",$_SERVER['REMOTE_ADDR']),0);
 							$number=db_num_rows($result2);
 							for ($i=0;$i<$number;$i++){
 								$row2 = db_fetch_assoc($result2);
 								//delete old messages that
-								$sql = "DELETE FROM " . db_prefix("mail") . " WHERE msgto={$row2['acctid']} AND msgfrom=0 AND subject = '".serialize($subj)."' AND seen=0";
-								db_query($sql);
+$sql = "DELETE FROM " . db_prefix("mail") . " WHERE msgto=? AND msgfrom=0 AND subject = ? AND seen=0";
+db_query_prepared($sql, [$row2['acctid'], serialize($subj)]);
 								if (db_affected_rows()>0) $noemail = true; else $noemail = false;
 								$msg = translate_mail(array("This message is generated as a result of one or more of the accounts having been a superuser account.  Log Follows:`n`n%s",$alert),0);
 								systemmail($row2['acctid'],$subj,$msg,0,$noemail);
@@ -158,10 +171,10 @@ if ($name!=""){
 		if ($location == $iname) {
 			$session['user']['restorepage']="inn.php?op=strolldown";
 		} else {
-			$session['user']['restorepage']="news.php";
-		}
-		$sql = "UPDATE " . db_prefix("accounts") . " SET loggedin=0,restorepage='{$session['user']['restorepage']}' WHERE acctid = ".$session['user']['acctid'];
-		db_query($sql);
+$session['user']['restorepage']="news.php";
+}
+$sql = "UPDATE " . db_prefix("accounts") . " SET loggedin=0,restorepage=? WHERE acctid = ?";
+db_query_prepared($sql, [$session['user']['restorepage'], $session['user']['acctid']]);
 		invalidatedatacache("charlisthomepage");
 		invalidatedatacache("list.php-warsonline");
 

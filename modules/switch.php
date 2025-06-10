@@ -81,11 +81,12 @@ function switch_run()
             $post = httpallpost();
             $post['password'] = md5(md5($post['password']));
             $post['login'] = filter_var($post['login'], FILTER_SANITIZE_STRING);
-            $sql = db_query(
+            $sql = db_query_prepared(
                 "SELECT acctid, name, uniqueid, lastip
                 FROM $accounts
-                WHERE password = '{$post['password']}'
-                AND login = '{$post['login']}'"
+                WHERE password = ?
+                AND login = ?",
+                [$post['password'], $post['login']]
             );
             if (db_num_rows($sql) == 0) {
                 addnav('Go back', 'runmodule.php?module=switch&op=add');
@@ -147,9 +148,9 @@ function switch_run()
                 debuglog('tried to switch into an account they do not have access to!');
                 break;
             }
-            $sql = db_query("UPDATE $accounts SET loggedin = 0 WHERE acctid = '{$session['user']['acctid']}'");
-            $sql = db_query("UPDATE $accounts SET loggedin = 1 WHERE acctid = '$id'");
-            $sql = db_query("SELECT * FROM $accounts WHERE acctid = '$id'");
+            $sql = db_query_prepared("UPDATE $accounts SET loggedin = 0 WHERE acctid = ?", [$session['user']['acctid']]);
+            $sql = db_query_prepared("UPDATE $accounts SET loggedin = 1 WHERE acctid = ?", [$id]);
+            $sql = db_query_prepared("SELECT * FROM $accounts WHERE acctid = ?", [$id]);
             $session['user'] = db_fetch_assoc($sql);
             $session['loggedin'] = true;
             $session['laston'] = date('Y-m-d H:i:s');
@@ -176,10 +177,11 @@ function switch_run()
                 );
                 foreach ($allAccounts as $acctid) {
                     debug($acctid);
-                    $sql = db_query(
+                    $sql = db_query_prepared(
                         "SELECT name
                         FROM $accounts
-                        WHERE acctid = '$acctid'"
+                        WHERE acctid = ?",
+                        [$acctid]
                     );
                     $row = db_fetch_assoc($sql);
                     output(

@@ -53,6 +53,75 @@ function db_query($sql, $die = true) {
 	return $r;
 }
 
+function db_query_prepared($sql, $params = [], $types = '', $die = true)
+{
+    global $session, $dbinfo, $mysqli_resource;
+    $dbinfo['queriesthishit']++;
+    $starttime = getmicrotime();
+    if (!$mysqli_resource) {
+        require_once('dbconnect.php');
+        db_connect($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+    }
+    $stmt = mysqli_prepare($mysqli_resource, $sql);
+    if (!$stmt && $die === true) {
+        if (defined('IS_INSTALLER')) {
+            return false;
+        }
+        if ($session['user']['superuser'] & SU_DEVELOPER || 1) {
+            require_once('lib/show_backtrace.php');
+            die(
+                "<pre>" . HTMLEntities($sql, ENT_COMPAT, getsetting('charset', 'ISO-8859-1')) . "</pre>" .
+                db_error(LINK) .
+                show_backtrace()
+            );
+        }
+        die('A most bogus error has occurred.  I apologise, but the page you were trying to access is broken.  Please use your browser\'s back button and try again.');
+    }
+    if (!empty($params)) {
+        if ($types === '') {
+            foreach ($params as $p) {
+                if (is_int($p)) {
+                    $types .= 'i';
+                } elseif (is_float($p)) {
+                    $types .= 'd';
+                } else {
+                    $types .= 's';
+                }
+            }
+        }
+        $bind = [];
+        $bind[] = $types;
+        foreach ($params as $k => $p) {
+            $bind[$k + 1] = &$params[$k];
+        }
+        call_user_func_array('mysqli_stmt_bind_param', array_merge([$stmt], $bind));
+    }
+    $r = mysqli_stmt_execute($stmt);
+    if (!$r && $die === true) {
+        if (defined('IS_INSTALLER')) {
+            return false;
+        }
+        if ($session['user']['superuser'] & SU_DEVELOPER || 1) {
+            require_once('lib/show_backtrace.php');
+            die(
+                "<pre>" . HTMLEntities($sql, ENT_COMPAT, getsetting('charset', 'ISO-8859-1')) . "</pre>" .
+                db_error(LINK) .
+                show_backtrace()
+            );
+        }
+        die('A most bogus error has occurred.  I apologise, but the page you were trying to access is broken.  Please use your browser\'s back button and try again.');
+    }
+    $result = mysqli_stmt_get_result($stmt);
+    unset($dbinfo['affected_rows']);
+    $dbinfo['affected_rows'] = mysqli_stmt_affected_rows($stmt);
+    if (!isset($dbinfo['querytime'])) {
+        $dbinfo['querytime'] = 0;
+    }
+    $endtime = getmicrotime();
+    $dbinfo['querytime'] += $endtime - $starttime;
+    return $result ?: $stmt;
+}
+
 //& at the start returns a reference to the data array.
 //since it's possible this array is large, we'll save ourselves
 //the overhead of duplicating the array, then destroying the old
