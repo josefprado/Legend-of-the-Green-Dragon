@@ -36,3 +36,9 @@ sudo chown -R www-data:www-data ./cache/
 
 # Navigate to /installer.php in your browser. Be sure to include the name of your cache folder during installation.
 ```
+
+## Security Notes
+Legacy versions relied on PHP's deprecated *magic quotes* feature to escape user
+input. This project no longer enables magic quotes. When writing new code or
+modules, use `db_escape()` or parameterized queries to sanitize all input before
+executing database statements.

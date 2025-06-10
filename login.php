@@ -33,8 +33,10 @@ if ($name!=""){
 		} else {
 			$password = md5(md5($password));
 		}
-		$sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = '$name' AND password='$password' AND locked=0";
-		$result = db_query($sql);
+                $name = db_escape($name);
+                $password = db_escape($password);
+                $sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = '$name' AND password='$password' AND locked=0";
+                $result = db_query($sql);
 		if (db_num_rows($result)==1){
 			$session['user']=db_fetch_assoc($result);
 			$companions = @unserialize($session['user']['companions']);
@@ -105,7 +107,8 @@ if ($name!=""){
 			$sql = "DELETE FROM " . db_prefix("faillog") . " WHERE date<'".date("Y-m-d H:i:s",strtotime("-".(getsetting("expirecontent",180)/4)." days"))."'";
 			checkban($name, true);
 			db_query($sql);
-			$sql = "SELECT acctid FROM " . db_prefix("accounts") . " WHERE login='$name'";
+                        $escname = db_escape($name);
+                        $sql = "SELECT acctid FROM " . db_prefix("accounts") . " WHERE login='$escname'";
 			$result = db_query($sql);
 			if (db_num_rows($result)>0){
 				// just in case there manage to be multiple accounts on

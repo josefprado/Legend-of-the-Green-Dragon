@@ -18,3 +18,21 @@ define('DBTYPE', 'mysqli_proc');
 $dbinfo['queriesthishit'] = 0;
 
 require_once('lib/dbwrapper_' . DBTYPE . '.php');
+
+function db_escape(string $string): string
+{
+    switch (DBTYPE) {
+        case 'mysqli_proc':
+        case 'mysqli_oos':
+            global $mysqli_resource;
+            if (!$mysqli_resource) {
+                require_once('dbconnect.php');
+                db_connect($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+            }
+            return mysqli_real_escape_string($mysqli_resource, $string);
+        case 'mysqli_sqlite':
+            return SQLite3::escapeString($string);
+        default:
+            return addslashes($string);
+    }
+}
