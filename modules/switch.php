@@ -79,21 +79,34 @@ function switch_run()
             break;
         case 'verify':
             $post = httpallpost();
-            $post['password'] = md5(md5($post['password']));
             $post['login'] = filter_var($post['login'], FILTER_SANITIZE_STRING);
             $sql = db_query(
-                "SELECT acctid, name, uniqueid, lastip
+                "SELECT acctid, name, uniqueid, lastip, password
                 FROM $accounts
-                WHERE password = '{$post['password']}'
-                AND login = '{$post['login']}'"
+                WHERE login = '{$post['login']}'"
             );
+            $row = db_fetch_assoc($sql);
+            $valid = false;
+            if ($row) {
+                $stored = $row['password'];
+                if (substr($stored,0,1)==='$') {
+                    $valid = password_verify($post['password'], $stored);
+                } else {
+                    if (md5(md5($post['password'])) == $stored) {
+                        $valid = true;
+                    }
+                }
+            }
             if (db_num_rows($sql) == 0) {
                 addnav('Go back', 'runmodule.php?module=switch&op=add');
                 output("`\$Sorry, no account was found with those credentials!");
                 break;
             }
-            else {
-                $row = db_fetch_assoc($sql);
+            if (!$valid) {
+                addnav('Go back', 'runmodule.php?module=switch&op=add');
+                output("`\$Sorry, no account was found with those credentials!");
+                break;
+            } else {
                 addnav('Go back', 'runmodule.php?module=switch');
                 if ($row['acctid'] == $session['user']['acctid']) {
                     output("`\$Sorry, but you cannot add a link to yourself!");

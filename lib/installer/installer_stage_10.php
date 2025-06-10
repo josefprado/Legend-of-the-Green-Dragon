@@ -31,7 +31,7 @@ if (db_num_rows($result) == 0) {
 			SU_POST_MOTD | SU_MODERATE_CLANS | SU_EDIT_RIDDLES |
 			SU_MANAGE_MODULES | SU_AUDIT_MODERATION | SU_RAW_SQL |
 			SU_VIEW_SOURCE | SU_NEVER_EXPIRE;
-			$pass = md5(md5(stripslashes(httppost('pass1'))));
+                        $pass = password_hash(stripslashes(httppost('pass1')), PASSWORD_DEFAULT);
 			db_query(
 				"DELETE FROM $accountsPrefix WHERE login = '$name'"
 			);

@@ -19,26 +19,52 @@ if ($name!=""){
 	if ($session['loggedin']){
 		redirect("badnav.php");
 	}else{
-		$password = httppost('password');
-		$password = stripslashes($password);
-		if (substr($password, 0, 5) == "!md5!") {
-			$password = md5(substr($password, 5));
-		} elseif (substr($password, 0, 6) == "!md52!") {// && strlen($password) == 38) {
-			$force = httppost('force');
-			if ($force) {
-				$password = addslashes(substr($password, 6));
-			} else {
-				$password='no hax0rs for j00!';
-			}
-		} else {
-			$password = md5(md5($password));
-		}
-		$sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = '$name' AND password='$password' AND locked=0";
-		$result = db_query($sql);
-		if (db_num_rows($result)==1){
-			$session['user']=db_fetch_assoc($result);
-			$companions = @unserialize($session['user']['companions']);
-			if (!is_array($companions)) $companions = array();
+               $rawpass = httppost('password');
+               $rawpass = stripslashes($rawpass);
+               $force = httppost('force');
+
+               // Preserve compatibility with legacy hashed submissions
+               $md5pass = md5(md5($rawpass));
+               if (substr($rawpass, 0, 5) == "!md5!") {
+                       $md5pass = md5(substr($rawpass, 5));
+               } elseif (substr($rawpass, 0, 6) == "!md52!" && $force) {
+                       $md5pass = addslashes(substr($rawpass, 6));
+               }
+
+               $sql = "SELECT * FROM " . db_prefix("accounts") . " WHERE login = '$name' AND locked=0";
+               $result = db_query($sql);
+               if (db_num_rows($result)==1){
+                       $session['user']=db_fetch_assoc($result);
+                       $stored = $session['user']['password'];
+                       $valid = false;
+                       if (substr($stored,0,1)==='$') {
+                               // new style hash
+                               if (substr($rawpass,0,5) !== '!md5!' && substr($rawpass,0,6) !== '!md52!') {
+                                       if (password_verify($rawpass, $stored)) {
+                                               $valid = true;
+                                               if (password_needs_rehash($stored, PASSWORD_DEFAULT)) {
+                                                       $newhash = password_hash($rawpass, PASSWORD_DEFAULT);
+                                                       db_query("UPDATE " . db_prefix("accounts") . " SET password='".addslashes($newhash)."' WHERE acctid=".$session['user']['acctid']);
+                                                       $session['user']['password'] = $newhash;
+                                               }
+                                       }
+                               }
+                       } else {
+                               // legacy md5 hash
+                               if ($md5pass == $stored) {
+                                       $valid = true;
+                                       if (substr($rawpass,0,5) !== '!md5!' && substr($rawpass,0,6) !== '!md52!') {
+                                               $newhash = password_hash($rawpass, PASSWORD_DEFAULT);
+                                               db_query("UPDATE " . db_prefix("accounts") . " SET password='".addslashes($newhash)."' WHERE acctid=".$session['user']['acctid']);
+                                               $session['user']['password'] = $newhash;
+                                       }
+                               }
+                       }
+                       if (!$valid) {
+                               $session['user'] = array();
+                       }
+                       $companions = @unserialize($session['user']['companions']);
+                       if (!is_array($companions)) $companions = array();
 			$baseaccount = $session['user'];
 			checkban($session['user']['login'], true); 
 			modulehook("check-login");

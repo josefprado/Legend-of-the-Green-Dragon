@@ -13,12 +13,12 @@ foreach ($post as $key => $val) {
 	if (isset($userinfo[$key])){
 		if ($key=="newpassword" ){
 			if ($val>"") {
-				$sql.="password=\"".md5(md5($val))."\",";
+                               $sql.="password=\"".addslashes(password_hash($val, PASSWORD_DEFAULT))."\",";
 				$updates++;
 				output("Password value has been updated.`n");
 				debuglog($session['user']['name']."`0 changed password to $val",$userid);
 				if ($session['user']['acctid']==$userid) {
-					$session['user']['password']=md5(md5($val));
+                                       $session['user']['password']=password_hash($val, PASSWORD_DEFAULT);
 				}
 			}
 		}elseif ($key=="superuser"){
