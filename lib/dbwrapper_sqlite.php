@@ -116,17 +116,18 @@ function db_error(): string
  * Return an associative array of recent statement, or checks the cache.
  * @return array
  */
-function db_fetch_assoc(array $result)
+function db_fetch_assoc(&$result)
 {
     if (is_array($result)) {
-        if (list($key, $val) = each($result)) {
+        $key = key($result);
+        if ($key !== null) {
+            $val = current($result);
+            next($result);
             return $val;
-        }
-        else {
+        } else {
             return false;
         }
-    }
-    else {
+    } else {
         return $result->fetchArray(SQLITE3_ASSOC);
     }
 }
