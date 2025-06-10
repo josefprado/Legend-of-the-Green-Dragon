@@ -40,6 +40,71 @@ function db_query($sql, $die=true){
 	return $r;
 }
 
+function db_query_prepared($sql, $params = [], $types = '', $die = true)
+{
+    global $session, $dbinfo, $mysqli_resource;
+    $dbinfo['queriesthishit']++;
+    $starttime = getmicrotime();
+    $stmt = $mysqli_resource->prepare($sql);
+    if (!$stmt && $die === true) {
+        if (defined('IS_INSTALLER')) {
+            return false;
+        }
+        if ($session['user']['superuser'] & SU_DEVELOPER || 1) {
+            require_once('lib/show_backtrace.php');
+            die(
+                "<pre>" . HTMLEntities($sql, ENT_COMPAT, getsetting('charset', 'ISO-8859-1')) . "</pre>" .
+                db_error(LINK) .
+                show_backtrace()
+            );
+        }
+        die('A most bogus error has occurred.  I apologise, but the page you were trying to access is broken.  Please use your browser\'s back button and try again.');
+    }
+    if (!empty($params)) {
+        if ($types === '') {
+            foreach ($params as $p) {
+                if (is_int($p)) {
+                    $types .= 'i';
+                } elseif (is_float($p)) {
+                    $types .= 'd';
+                } else {
+                    $types .= 's';
+                }
+            }
+        }
+        $bind = [];
+        foreach ($params as $k => $p) {
+            $bind[$k] = &$params[$k];
+        }
+        array_unshift($bind, $types);
+        call_user_func_array([$stmt, 'bind_param'], $bind);
+    }
+    $r = $stmt->execute();
+    if (!$r && $die === true) {
+        if (defined('IS_INSTALLER')) {
+            return false;
+        }
+        if ($session['user']['superuser'] & SU_DEVELOPER || 1) {
+            require_once('lib/show_backtrace.php');
+            die(
+                "<pre>" . HTMLEntities($sql, ENT_COMPAT, getsetting('charset', 'ISO-8859-1')) . "</pre>" .
+                db_error(LINK) .
+                show_backtrace()
+            );
+        }
+        die('A most bogus error has occurred.  I apologise, but the page you were trying to access is broken.  Please use your browser\'s back button and try again.');
+    }
+    $result = $stmt->get_result();
+    unset($dbinfo['affected_rows']);
+    $dbinfo['affected_rows'] = $stmt->affected_rows;
+    if (!isset($dbinfo['querytime'])) {
+        $dbinfo['querytime'] = 0;
+    }
+    $endtime = getmicrotime();
+    $dbinfo['querytime'] += $endtime - $starttime;
+    return $result ?: $stmt;
+}
+
 //& at the start returns a reference to the data array.
 //since it's possible this array is large, we'll save ourselves
 //the overhead of duplicating the array, then destroying the old

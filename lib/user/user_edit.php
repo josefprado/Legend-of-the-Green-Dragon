@@ -1,5 +1,5 @@
 <?php
-$result = db_query("SELECT * FROM " . db_prefix("accounts") . " WHERE acctid='$userid'");
+$result = db_query_prepared("SELECT * FROM " . db_prefix("accounts") . " WHERE acctid=?", [$userid]);
 $row = db_fetch_assoc($result);
 $petition=httpget("returnpetition");
 if ($petition != "")
@@ -81,8 +81,8 @@ if (httpget("subop")==""){
 			// Set up the defaults as well.
 			if (isset($x[1])) $data[$key] = $x[1];
 		}
-		$sql = "SELECT * FROM " . db_prefix("module_userprefs") ." WHERE modulename='$module' AND userid='$userid'";
-		$result = db_query($sql);
+$sql = "SELECT * FROM " . db_prefix("module_userprefs") ." WHERE modulename=? AND userid=?";
+$result = db_query_prepared($sql, [$module, $userid]);
 		while ($row = db_fetch_assoc($result)){
 			$data[$row['setting']] = $row['value'];
 		}
