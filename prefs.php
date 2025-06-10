@@ -69,12 +69,7 @@ if ($op=="suicide" && getsetting("selfdelete",0)!=0) {
         }else{
             if ($pass1!=""){
                 if (strlen($pass1)>3){
-                    if (substr($pass1,0,5)!="!md5!"){
-                        $pass1 = md5(md5($pass1));
-                    }else{
-                        $pass1 = md5(substr($pass1,5));
-                    }
-                    $session['user']['password']=$pass1;
+                    $session['user']['password']=password_hash($pass1, PASSWORD_DEFAULT);
                     output("`#Your password has been changed.`n");
                 }else{
                     output("`#Your password is too short.");
@@ -172,29 +167,6 @@ if ($op=="suicide" && getsetting("selfdelete",0)!=0) {
         "bio"=>"Short Character Biography (255 chars max),string,255",
         "nojump"=>"Don't jump to comment areas after refreshing or posting a comment?,bool",
     );
-    rawoutput("<script language='JavaScript' src='lib/md5.js'></script>");
-    $warn = translate_inline("Your password is too short.  It must be at least 4 characters long.");
-    rawoutput("<script language='JavaScript'>
-    <!--
-    function md5pass(){
-        //encode passwords before submission to protect them even from network sniffing attacks.
-        var passbox = document.getElementById('pass1');
-        if (passbox.value.len < 4 && passbox.value.len > 0){
-            alert('$warn');
-            return false;
-        }else{
-            var passbox2 = document.getElementById('pass2');
-            if (passbox2.value.substring(0, 5) != '!md5!') {
-                passbox2.value = '!md5!' + hex_md5(passbox2.value);
-            }
-            if (passbox.value.substring(0, 5) != '!md5!') {
-                passbox.value = '!md5!' + hex_md5(passbox.value);
-            }
-            return true;
-        }
-    }
-    //-->
-    </script>");
     //
     $prefs = $session['user']['prefs'];
     $prefs['bio'] = $session['user']['bio'];
@@ -297,7 +269,7 @@ if ($op=="suicide" && getsetting("selfdelete",0)!=0) {
     
     $form = array_merge($form, $msettings);
     $prefs = array_merge($prefs, $mdata);
-    rawoutput("<form action='prefs.php?op=save' method='POST' onSubmit='return(md5pass)'>");
+    rawoutput("<form action='prefs.php?op=save' method='POST' >");
     $info = showform($form,$prefs);
     rawoutput("<input type='hidden' value=\"" .
             htmlentities(serialize($info), ENT_COMPAT, getsetting("charset", "ISO-8859-1"))."\" name='oldvalues'>");

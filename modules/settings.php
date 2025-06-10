@@ -142,9 +142,18 @@ function settings_run()
                 unset($post['return']);
             }
             //Fix template changes.
-            if (md5(md5($post['oldpass'])) == $session['user']['password'] && $post['newpass'] != '') {
+            $stored = $session['user']['password'];
+            $validOld = false;
+            if (substr($stored, 0, 1) === '$') {
+                $validOld = password_verify($post['oldpass'], $stored);
+            } else {
+                if (md5(md5($post['oldpass'])) == $stored) {
+                    $validOld = true;
+                }
+            }
+            if ($validOld && $post['newpass'] != '') {
                 require_once('lib/systemmail.php');
-                $newPass = md5(md5($post['newpass']));
+                $newPass = password_hash($post['newpass'], PASSWORD_DEFAULT);
                 db_query(
                     "UPDATE $accounts
                     SET password = '$newPass'

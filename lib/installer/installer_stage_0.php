@@ -14,12 +14,12 @@ if (DB_CHOSEN && file_exists('dbconnect.php')) {
 		$needsauthentication = false;
 	}
 	if (httppost("username")>""){
-		debug(md5(md5(stripslashes(httppost("password")))), true);
+       debug(password_hash(stripslashes(httppost("password")), PASSWORD_DEFAULT), true);
 		$version = getsetting("installer_version","-1");
 		$accountsPrefix = db_prefix('accounts');
 		$userName = mysqli_real_escape_string($mysqli_resource, httppost('username'));
 		$password = mysqli_real_escape_string($mysqli_resource, httppost('password'));
-		$newPassworc = md5(md5(stripslashes(httppost('password'))));
+       $newPassworc = password_hash(stripslashes(httppost('password')), PASSWORD_DEFAULT);
 		$megaUser = SU_MEGAUSER;
 		if ($version == "-1")
 			$sql = "SELECT * FROM $accountsPrefix

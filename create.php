@@ -26,14 +26,10 @@ if ($op=="val"){
 		$sql = "UPDATE " . db_prefix("accounts") . " SET emailvalidation='' WHERE emailvalidation='$id';";
 		db_query($sql);
 		output("`#`cYour email has been validated.  You may now log in.`c`0");
-		rawoutput("<form action='login.php' method='POST'>");
-		rawoutput("<input name='name' value=\"{$row['login']}\" type='hidden'>");
-		rawoutput("<input name='password' value=\"!md52!{$row['password']}\" type='hidden'>");
-		rawoutput("<input name='force' value='1' type='hidden'>");
-		output("Your email has been validated, your login name is `^%s`0.`n`n",
-				$row['login']);
-		$click = translate_inline("Click here to log in");
-		rawoutput("<input type='submit' class='button' value='$click'></form>");
+               output("Your email has been validated, your login name is `^%s`0.`n`n",
+                               $row['login']);
+               $click = translate_inline("Click here to log in");
+               rawoutput("<a href='login.php'>$click</a>");
 		output_notl("`n");
 		if ($trash > 0) {
 			output("`^Characters that have never been logged into will be deleted after %s day(s) of no activity.`n`0", $trash);
@@ -125,15 +121,11 @@ if (getsetting("allowcreation",1)==0){
 				}
 			}
 
-			$passlen = (int)httppost("passlen");
-			if (substr($pass1, 0, 5) != "!md5!" &&
-					substr($pass1, 0, 6) != "!md52!") {
-				$passlen = strlen($pass1);
-			}
-			if ($passlen<=3){
-					$msg.=translate_inline("Your password must be at least 4 characters long.`n");
-				$blockaccount=true;
-			}
+                       $passlen = strlen($pass1);
+                       if ($passlen <= 3){
+                                       $msg.=translate_inline("Your password must be at least 4 characters long.`n");
+                               $blockaccount=true;
+                       }
 			if ($pass1!=$pass2){
 				$msg.=translate_inline("Your passwords do not match.`n");
 				$blockaccount=true;
@@ -182,12 +174,7 @@ if (getsetting("allowcreation",1)==0){
 					}else{
 						$referer=0;
 					}
-					$dbpass = "";
-					if (substr($pass1, 0, 5) == "!md5!") {
-						$dbpass = md5(substr($pass1, 5));
-					} else {
-						$dbpass = md5(md5($pass1));
-					}
+                                       $dbpass = password_hash($pass1, PASSWORD_DEFAULT);
 					$sql = "INSERT INTO " . db_prefix("accounts") . "
 						(name, superuser, title, password, sex, login, laston, uniqueid, lastip, gold, emailaddress, emailvalidation, referer, regdate)
 						VALUES
@@ -243,30 +230,9 @@ if (getsetting("allowcreation",1)==0){
 		$refer=httpget('r');
 		if ($refer) $refer = "&r=".htmlentities($refer, ENT_COMPAT, getsetting("charset", "ISO-8859-1"));
 
-		rawoutput("<script language='JavaScript' src='lib/md5.js'></script>");
-		rawoutput("<script language='JavaScript'>
-		<!--
-		function md5pass(){
-			// encode passwords
-			var plen = document.getElementById('passlen');
-			var pass1 = document.getElementById('pass1');
-			plen.value = pass1.value.length;
-
-			if(pass1.value.substring(0, 5) != '!md5!') {
-				pass1.value = '!md5!'+hex_md5(pass1.value);
-			}
-			var pass2 = document.getElementById('pass2');
-			if(pass2.value.substring(0, 5) != '!md5!') {
-				pass2.value = '!md5!'+hex_md5(pass2.value);
-			}
-
-		}
-		//-->
-		</script>");
-		rawoutput("<form action=\"create.php?op=create$refer\" method='POST' onSubmit=\"md5pass();\">");
+		rawoutput("<form action=\"create.php?op=create$refer\" method='POST' >");
 		// this is the first thing a new player will se, so let's make it look
 		// better
-		rawoutput("<input type='hidden' name='passlen' id='passlen' value='0'>");
 		rawoutput("<table><tr valign='top'><td>");
 		output("How will you be known to this world? ");
 		rawoutput("</td><td><input name='name'></td></tr><tr valign='top'><td>");
